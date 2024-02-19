@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {PriceConverter} from "./PriceConverter.sol";
+
+error NotOwner();
+
+contract FundMe {
+    using PriceConverter for uint256;
+    address[] private funders;
+    address private /* immutable */ i_owner;
+    uint256 public constant MINIMUM_USD = 5 * 10 ** 18;
+
+    mapping(address => uint256) private addressToAmountFunded;
+    AggregatorV3Interface private s_priceFeed;
+
+    // Could we make this constant?  /* hint: no! We should make it immutable! */
+    
+    /**
+     * 
+     * @param pricefeed we make smart contract dynamic. so we don't have to bother every time we want to change the chain
+     * by doing so, our file will fetch the prices according to given chain rpc
+     */
+    constructor(address pricefeed) {
+        i_owner = msg.sender;
+        s_priceFeed = AggregatorV3Interface(pricefeed);
+    }
+
+    function fund() public payable {
+        require(msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD, "You need to spend more ETH!");
+        // require(PriceConverter.getConversionRate(msg.value) >= MINIMUM_USD, "You need to spend more ETH!");
+        addressToAmountFunded[msg.sender] += msg.value;
+        funders.push(msg.sender);
+    }
+    
+    function getVersion() public view returns (uint256){
+        // AggregatorV3Interface priceFeed = AggregatorV3Interface(
+        //     // 0x694AA1769357215DE4FAC081bf1f309aDC325306
+        //     0x0715A7794a1dc8e42615F059dD6e406A6594651A
+        //     );
+        return s_priceFeed.version();
+    }
+    
+    modifier onlyOwner {
+        // require(msg.sender == owner);
+        if (msg.sender != i_owner) revert NotOwner();
+        _;
+    }
+    
+    function withdraw() public payable onlyOwner {
+        uint256 funderLength = funders.length;
+        for (uint256 funderIndex=0; funderIndex < funderLength; funderIndex++)
+        {
+            address funder = funders[funderIndex];
+            addressToAmountFunded[funder] = 0;
+        }
+        funders = new address[](0);
+        // // transfer
+        // payable(msg.sender).transfer(address(this).balance);
+        
+        // // send
+        // bool sendSuccess = payable(msg.sender).send(address(this).balance);
+        // require(sendSuccess, "Send failed");
+
+        // call
+        (bool callSuccess, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(callSuccess, "Call failed");
+    }
+    // Explainer from: https://solidity-by-example.org/fallback/
+    // Ether is sent to contract
+    //      is msg.data empty?
+    //          /   \ 
+    //         yes  no
+    //         /     \
+    //    receive()?  fallback() 
+    //     /   \ 
+    //   yes   no
+    //  /        \
+    //receive()  fallback()
+
+    fallback() external payable {
+        fund();
+    }
+
+    receive() external payable {
+        fund();
+    }
+
+    function getAddressToAmountFunded(address fundingAddress) 
+    external view returns(uint256)
+    {
+        return addressToAmountFunded[fundingAddress];
+    }
+
+    function getFunder(uint256 _index) external view returns(address _funder){
+        if(_index < funders.length){
+            _funder = funders[_index];
+        }
+    }
+
+    function getOwner() external view returns(address){
+        return i_owner;
+    }
+
+}
