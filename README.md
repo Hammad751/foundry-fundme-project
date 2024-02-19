@@ -1,3 +1,10 @@
+### Pre-requisits
+
+```pre-requisits
+At least basics of solidity language
+Basics of wallet creations
+```
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
@@ -65,14 +72,10 @@ $ anvil --help
 $ cast --help
 ```
 
-``` chainlink installation
+### chainlink installation
 forge install smartcontractkit/chainlink-brownie-contracts@0.8.0 --no-commit
 
 do the above command for local installation of all standards
 
 ```
 
-```test cases
-
-
-```
