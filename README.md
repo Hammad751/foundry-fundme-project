@@ -4,6 +4,9 @@
 At least basics of solidity language
 Basics of wallet creations
 ```
+### Solidity Documentation
+https://docs.soliditylang.org/en/v0.8.24/
+
 
 ## Foundry
 
